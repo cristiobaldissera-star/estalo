@@ -188,6 +188,11 @@ textarea{min-height:120px;resize:vertical}
 .banner .btns .b{padding:12px 14px}
 .toast{display:flex;align-items:center;gap:14px}
 .toast button{color:var(--accent);font-weight:800;padding:4px 2px;text-decoration:underline;text-underline-offset:3px}
+.aibtn{width:100%;background:var(--brand);color:var(--brand-ink)}
+.aibtn.off{background:var(--raised);color:var(--muted)}
+.ai-status{font-size:.85rem;color:var(--muted);text-align:center;margin-top:-8px}
+.raw{background:var(--raised);border-radius:14px;padding:10px 12px;font-size:.85rem;color:var(--muted);font-style:italic}
+.raw b{display:block;font-style:normal;font-size:.72rem;letter-spacing:.07em;text-transform:uppercase}
 .bigcal{font-size:1.05rem;padding:18px}
 #splash{position:fixed;inset:0;z-index:100;background:#ff8a1f;display:grid;place-items:center;transition:opacity .28s ease}
 #splash.out{opacity:0}
@@ -325,6 +330,12 @@ textarea{min-height:120px;resize:vertical}
       L.innerHTML=cats.map(c=>{const k=ideas.filter(i=>i.cat===c.id&&i.status!=="executada").length;
         return'<div class="catrow"'+cc(c)+'><span class="sw"><i></i></span><span class="nm">'+esc(c.name)+'<small>'+k+' ideia'+(k===1?'':'s')+' a fazer</small></span><button class="more" data-act="catMenu" data-id="'+c.id+'" aria-label="Opções da aba">'+IC.dots+'</button></div>';}).join("")+
         '<button class="btn-line" data-act="newCat">+ Nova aba</button>'+
+        (()=>{const a=ai();S.prov=a.prov;const has=!!a.key;
+          return'<div class="empty" style="padding:20px;text-align:left;align-items:stretch;gap:12px"><b>✨ IA que organiza</b><span>Depois que você fala, a IA cria o título e resume a ideia. '+(has?'<strong style="color:var(--ok)">Ligada ('+(a.prov==="claude"?"Claude":"Gemini")+').</strong>':'Escolha uma e cole sua chave.')+'</span>'+
+          '<div class="seg" data-pick="prov" style="grid-template-columns:1fr 1fr">'+[["gemini","Gemini · grátis"],["claude","Claude · pago"]].map(([k,l])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(a.prov===k)+'">'+l+'</button>').join("")+'</div>'+
+          '<div class="field"><label for="aiKey">Sua chave</label><input type="password" id="aiKey" autocomplete="off" placeholder="'+(has?'•••••••• (já salva)':'Cole aqui')+'"></div>'+
+          '<span style="font-size:.85rem">Gemini: crie grátis em <b>aistudio.google.com/apikey</b>. Claude: em <b>console.anthropic.com</b>. A chave fica só neste celular.</span>'+
+          '<div class="btns"><button class="b pri" data-act="aiSave">Salvar e testar</button>'+(has?'<button class="b sec" data-act="aiDel">Remover chave</button>':'')+'</div></div>';})()+
         (()=>{const m=meta(),rv=m.review||{freq:"daily",time:"09:00",msg:"Bora tirar uma ideia do papel?"};S.freq=rv.freq;
           return'<div class="empty" style="padding:20px;text-align:left;align-items:stretch;gap:12px"><b>✨ Lembrete de revisão</b><span>Um aviso no horário que você escolher pra lembrar de olhar suas ideias.'+(m.review&&m.review.on?' <strong style="color:var(--ok)">Ativo: '+FREQ[rv.freq][0].toLowerCase()+' às '+esc(rv.time)+'.</strong>':'')+'</span>'+
           '<div class="seg" data-pick="freq">'+Object.entries(FREQ).map(([k,[l]])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(rv.freq===k)+'">'+l+'</button>').join("")+'</div>'+
@@ -339,7 +350,7 @@ textarea{min-height:120px;resize:vertical}
     const nq=norm(q.trim());
     let items=(view==="open"?openAll:doneAll).filter(i=>filter==="all"||(i.cat||"")===filter)
       .filter(i=>view!=="done"||resFilter==="all"||(i.result||"")===resFilter)
-      .filter(i=>!nq||norm(i.title+" "+(i.text||"")+" "+(i.note||"")).includes(nq));
+      .filter(i=>!nq||norm(i.title+" "+(i.text||"")+" "+(i.note||"")+" "+(i.raw||"")).includes(nq));
     if(view==="open")items.sort((a,b)=>!!b.urgent-!!a.urgent||(a.remindAt&&b.remindAt?(a.remindAt<b.remindAt?-1:1):a.remindAt?-1:b.remindAt?1:((b.createdAt||"")<(a.createdAt||"")?-1:1)));
     else items.sort((a,b)=>(b.doneAt||"")<(a.doneAt||"")?-1:1);
     const banner=view==="open"&&needBackup()?'<div class="banner"><b>Hora do backup</b><span>'+backupMsg()+'</span><div class="btns"><button class="b sec" data-act="snooze">Depois</button><button class="b pri" data-act="backup">Fazer backup</button></div></div>':'';
@@ -355,14 +366,15 @@ textarea{min-height:120px;resize:vertical}
     const cls='card'+(expanded.has(i.id)?' open':'');
     if(i.status!=="executada"){
       const wc=whenCls(i.remindAt);
+      const rb=rawBox(i);
       const bs=(i.urgent?'<span class="badge urgent">🔥 Urgente</span>':'')+(i.remindAt?'<span class="badge '+wc+'">'+IC.clock+(wc==="late"?"Atrasada · ":"")+esc(fmtWhen(i.remindAt))+'</span>':'');
       const w=bs?'<div class="badges">'+bs+'</div>':'';
-      return'<article class="'+cls+(i.urgent?' is-urgent':'')+'"'+cc(c)+' data-act="expand" data-id="'+i.id+'"><div class="card-main">'+top+'<h3>'+esc(i.title)+'</h3>'+body+w+'</div>'+
+      return'<article class="'+cls+(i.urgent?' is-urgent':'')+'"'+cc(c)+' data-act="expand" data-id="'+i.id+'"><div class="card-main">'+top+'<h3>'+esc(i.title)+'</h3>'+body+w+rb+'</div>'+
         '<div class="side"><button class="check" data-act="done" data-id="'+i.id+'" aria-label="Marcar como executada">'+IC.check+'</button><button class="more" data-act="menu" data-id="'+i.id+'" aria-label="Mais opções">'+IC.dots+'</button></div></article>';}
     const R={funcionou:['ok','👍 Funcionou'],nao:['bad','👎 Não funcionou'],aguardando:['today','⏳ Aguardando']}[i.result];
     return'<article class="'+cls+'"'+cc(c)+' data-act="expand" data-id="'+i.id+'"><div class="card-main">'+top+'<h3>'+esc(i.title)+'</h3>'+body+
       '<div class="badges">'+(R?'<span class="badge '+R[0]+'">'+R[1]+'</span>':'<span class="badge">Sem resultado</span>')+(i.doneAt?'<span class="badge">'+IC.check+esc(fmtWhen(i.doneAt))+'</span>':'')+'</div>'+
-      (i.note?'<div class="note"><b>Anotação</b>'+esc(i.note)+'</div>':'')+'</div>'+
+      (i.note?'<div class="note"><b>Anotação</b>'+esc(i.note)+'</div>':'')+rawBox(i)+'</div>'+
       '<div class="side"><button class="more" data-act="doneEdit" data-id="'+i.id+'" aria-label="Editar anotação e resultado">'+IC.edit+'</button></div></article>';
   }
 
@@ -375,11 +387,13 @@ textarea{min-height:120px;resize:vertical}
 
   function openSheet(type,id){
     sheet={type,id};const i=ideas.find(x=>x.id===id),c=cats.find(x=>x.id===id);let h='<div class="grab"></div>';
-    if(type==="new"){S.cat=filter!=="all"?filter:"";
+    if(type==="new"){S.cat=filter!=="all"?filter:"";S.raw="";
       h+='<h2>Deu o estalo?</h2>'+(SR?'<div class="talk"><button type="button" class="talk-btn" data-act="talk" aria-label="Falar a ideia">'+IC.mic+'</button><span class="talk-lbl" id="talkLbl">Toque e fale sua ideia</span><small id="talkHint">Toque de novo quando terminar</small></div>'
           :'<div class="mic"><span class="ic">'+IC.mic+'</span><span>Toque na caixa e use o <b>microfone do teclado</b> para falar.</span></div>')+
-        '<div class="field"><label for="fText">Sua ideia</label><textarea id="fText" placeholder="Fale ou escreva do seu jeito…"></textarea></div>'+
-        '<div class="field" id="titleBox"><label for="fTitle">Título (opcional)</label><input type="text" id="fTitle" placeholder="Se deixar vazio, uso o começo da ideia"></div>'+
+        '<div class="field"><label for="fText">Sua ideia (vira a descrição)</label><textarea id="fText" placeholder="Fale ou escreva do seu jeito…"></textarea></div>'+
+        '<button type="button" class="b aibtn'+(aiReady()?'':' off')+'" data-act="organize" id="orgBtn">✨ '+(aiReady()?'Organizar com IA':'Ligar a IA que organiza')+'</button>'+
+        (aiReady()?'<p class="ai-status">'+(SR?'Ao parar o microfone, a IA já cria o título e o resumo':'A IA cria o título e o resumo da sua fala')+'</p>':'')+
+        '<div class="field" id="titleBox"><label for="fTitle">Título</label><input type="text" id="fTitle" placeholder="Se deixar vazio, uso o começo da ideia"></div>'+
         '<div class="field"><span class="lbl">Aba</span>'+catPicker(S.cat)+'</div>'+urgBlock(false)+remindBlock("")+
         '<div class="btns"><button class="b sec" data-act="close">Cancelar</button><button class="b pri" data-act="saveNew">Salvar ideia</button></div>';}
     if(type==="menu"){h+='<h2>'+esc(i.title)+'</h2><div class="menu">'+
@@ -387,9 +401,11 @@ textarea{min-height:120px;resize:vertical}
         '<button class="b sec" data-act="flipUrg" data-id="'+id+'"><svg class="i" viewBox="0 0 24 24"><path d="M12 3s5 4.5 5 10a5 5 0 0 1-10 0c0-2.2 1.2-3.8 2-4.6.3 1.6 1.2 2.6 2 2.6 0-3 1-5.8 1-8z"/></svg>'+(i.urgent?'Tirar urgência':'Marcar como urgente')+'</button>'+
         (i.remindAt?'<a class="b sec" href="'+esc(calLink(i))+'" target="_blank" rel="noopener">'+IC.cal+'Pôr na agenda do celular</a>':'')+
         '<button class="b danger" data-act="askDel" data-id="'+id+'">'+IC.trash+'<span>Apagar ideia</span></button></div>';}
-    if(type==="edit"){S.cat=i.cat||"";
+    if(type==="edit"){S.cat=i.cat||"";S.raw=i.raw||"";
       h+='<h2>Editar ideia</h2><div class="field"><label for="fTitle">Título</label><input type="text" id="fTitle" value="'+esc(i.title)+'"></div>'+
         '<div class="field"><label for="fText">Detalhes</label><textarea id="fText">'+esc(i.text||"")+'</textarea></div>'+
+        '<button type="button" class="b aibtn'+(aiReady()?'':' off')+'" data-act="organize" id="orgBtn">✨ '+(aiReady()?'Organizar com IA':'Ligar a IA que organiza')+'</button>'+
+        (aiReady()?'<p class="ai-status">'+(i.raw?'Reorganiza a partir da sua fala original':'Cria um título e resume os detalhes')+'</p>':'')+
         '<div class="field"><span class="lbl">Aba</span>'+catPicker(S.cat)+'</div>'+urgBlock(i.urgent)+remindBlock(i.remindAt)+
         '<div class="btns"><button class="b sec" data-act="close">Cancelar</button><button class="b pri" data-act="saveEdit" data-id="'+id+'">Salvar</button></div>';}
     if(type==="done"||type==="doneEdit"){S.res=type==="doneEdit"?(i.result||""):"";
@@ -411,24 +427,96 @@ textarea{min-height:120px;resize:vertical}
     requestAnimationFrame(()=>requestAnimationFrame(()=>{$("scrim").classList.add("on");$("sheet").classList.add("on");}));
     const f=(type==="new"&&SR)?null:($("fText")||$("fCat"));if(f&&type!=="edit")setTimeout(()=>f.focus(),280);
   }
+  /* ---------- IA que organiza ---------- */
+  const AIK="estalo-ia";
+  function ai(){try{return Object.assign({prov:"gemini",key:""},JSON.parse(localStorage.getItem(AIK))||{});}catch(e){return{prov:"gemini",key:""};}}
+  function setAI(v){try{localStorage.setItem(AIK,JSON.stringify(v));}catch(e){}}
+  const aiReady=()=>!!ai().key;
+  function rawBox(i){return expanded.has(i.id)&&i.raw?'<div class="raw"><b>Fala original</b>'+esc(i.raw)+'</div>':'';}
+  class AIError extends Error{}
+  async function askAI(prompt){
+    const {prov,key}=ai();if(!key)throw new AIError("Configure a IA na tela Abas.");
+    let res,j;
+    try{
+      if(prov==="claude"){
+        for(const model of ["claude-haiku-5-5","claude-haiku-4-5"]){
+          res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+            body:JSON.stringify({model,max_tokens:700,messages:[{role:"user",content:prompt}]})});
+          if(res.status!==404)break;}
+        j=await res.json().catch(()=>({}));
+        if(!res.ok){const m=(j.error&&j.error.message)||"";
+          if(res.status===401)throw new AIError("Chave do Claude inválida. Confira em Abas.");
+          if(/credit|balance/i.test(m))throw new AIError("Sua conta do Claude está sem créditos.");
+          if(res.status===429)throw new AIError("Muitos pedidos seguidos. Tente em 1 minuto.");
+          throw new AIError("A IA não respondeu agora. Salve do seu jeito.");}
+        return (j.content||[]).map(x=>x.text||"").join("");
+      }
+      for(const model of ["gemini-3.1-flash-lite","gemini-flash-lite-latest","gemini-flash-latest"]){
+        res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{temperature:0.3,responseMimeType:"application/json"}})});
+        if(res.status!==404)break;}
+      j=await res.json().catch(()=>({}));
+      if(!res.ok){const m=(j.error&&(j.error.message+" "+j.error.status))||"";
+        if(res.status===400&&/key/i.test(m)||res.status===403)throw new AIError("Chave do Gemini inválida. Confira em Abas.");
+        if(res.status===429)throw new AIError("Limite grátis atingido. Tente mais tarde.");
+        throw new AIError("A IA não respondeu agora. Salve do seu jeito.");}
+      return ((j.candidates||[])[0]?.content?.parts||[]).map(x=>x.text||"").join("");
+    }catch(e){if(e instanceof AIError)throw e;throw new AIError(navigator.onLine?"Não consegui falar com a IA. Tente de novo.":"Sem internet. A ideia pode ser salva assim mesmo.");}
+  }
+  function parseJSON(t){const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<a)throw new AIError("A IA respondeu fora do formato. Tente de novo.");return JSON.parse(t.slice(a,b+1));}
+  async function organize(){
+    const ta=$("fText"),btn=$("orgBtn");if(!ta)return;const t=ta.value.trim();if(!t){toast("Fale ou escreva a ideia primeiro.",true);return;}
+    if(!S.raw)S.raw=t;const src=S.raw;
+    if(btn){btn.disabled=true;btn.textContent="✨ Organizando…";}
+    try{const now=new Date();
+      const out=parseJSON(await askAI("Você organiza ideias ditadas por voz, em português do Brasil, para um app de anotações. A fala pode ter erros de transcrição, repetições e hesitações (\"eh\", \"né\", \"tipo\"). Corrija nomes que pareçam erro óbvio de transcrição só se tiver certeza.\n"+
+        "Agora é "+localISO(now)+" ("+["domingo","segunda","terça","quarta","quinta","sexta","sábado"][now.getDay()]+"), fuso America/Sao_Paulo.\n"+
+        "Responda SOMENTE com JSON neste formato:\n{\"title\": título curto, direto e acionável, começando com verbo quando fizer sentido, até 60 caracteres,\n \"summary\": a ideia sintetizada em 1 a 4 tópicos curtos, um por linha, cada um começando com \"• \", sem inventar nada que a pessoa não disse,\n \"remindAt\": data e hora do lembrete no formato YYYY-MM-DDTHH:MM se a pessoa pediu para ser lembrada em um dia/horário, senão \"\",\n \"urgent\": true se a pessoa disse que é urgente, prioridade ou para fazer o quanto antes, senão false}\n\nFala:\n"+src));
+      if(!$("fText"))return;
+      $("fTitle").value=String(out.title||firstLine(src)).slice(0,90);
+      if(out.summary)$("fText").value=String(out.summary).trim();
+      if(out.urgent===true){const u=document.querySelector('#sheetIn [data-act="tglUrg"]');if(u)u.setAttribute("aria-pressed","true");}
+      if(/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(out.remindAt||"")){const tg=document.querySelector('#sheetIn [data-act="tgl"]');if(tg){tg.setAttribute("aria-pressed","true");$("whenBox").hidden=false;$("fWhen").value=out.remindAt;}}
+      toast("Pronto! Confira e salve ✨");
+    }catch(e){toast(e.message||"A IA não respondeu agora.",true);}
+    finally{const b2=$("orgBtn");if(b2){b2.disabled=false;b2.textContent="✨ Organizar de novo";}}
+  }
   /* ---------- voz ---------- */
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  let rec=null,listening=false,baseText="";
+  let rec=null,listening=false,baseText="",sessText="",afterStop=null,stopTimer=null;
   function setTalk(on,msg){listening=on;const b=document.querySelector(".talk-btn");if(b)b.classList.toggle("on",on);
     const l=$("talkLbl");if(l)l.textContent=msg||(on?"Ouvindo… pode falar":"Toque e fale sua ideia");
     const h=$("talkHint");if(h)h.textContent=on?"Toque de novo quando terminar":"Você pode corrigir o texto na caixa abaixo";}
+  const clean=t=>String(t||"").replace(/\s+/g," ").trim();
+  /* junta os trechos sem repetir: no Android cada trecho novo costuma repetir o anterior */
+  function collapse(list){const out=[];
+    for(const raw of list){const t=clean(raw);if(!t)continue;const last=out[out.length-1];
+      if(!last){out.push(t);continue;}
+      const L=last.toLowerCase(),T=t.toLowerCase();
+      if(T.startsWith(L))out[out.length-1]=t;else if(L.startsWith(T)||L.endsWith(T))continue;else out.push(t);}
+    return out.join(" ");}
+  function joinNoDup(base,add){base=clean(base);add=clean(add);if(!add)return base;if(!base)return add;
+    const B=base.toLowerCase(),A=add.toLowerCase();
+    if(B.endsWith(A))return base;if(A.startsWith(B))return add;
+    const bw=base.split(" "),aw=add.split(" ");let k=Math.min(bw.length,aw.length);
+    for(;k>0;k--){if(bw.slice(-k).join(" ").toLowerCase()===aw.slice(0,k).join(" ").toLowerCase())break;}
+    return base+" "+aw.slice(k).join(" ");}
+  function show(){const ta=$("fText");if(ta)ta.value=joinNoDup(baseText,sessText);}
+  function newSession(){
+    const r=new SR();r.lang="pt-BR";r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
+    r.onresult=e=>{if(r!==rec)return;sessText=collapse(Array.from(e.results,x=>x[0]&&x[0].transcript));show();};
+    r.onerror=e=>{if(r!==rec)return;const m={"not-allowed":"Permita o microfone nas configurações do navegador","service-not-allowed":"Permita o microfone nas configurações do navegador","network":"Sem internet para transcrever. Use o microfone do teclado","audio-capture":"Nenhum microfone encontrado"}[e.error];
+      if(m){listening=false;setTalk(false,m);}};
+    r.onend=()=>{if(r!==rec)return;baseText=joinNoDup(baseText,sessText);sessText="";show();
+      if(listening){setTimeout(()=>{if(!listening||r!==rec)return;try{rec=newSession();rec.start();}catch(e){listening=false;setTalk(false);}},120);}
+      else finishStop();};
+    return r;}
   function startTalk(){
-    if(!SR)return;
-    rec=new SR();rec.lang="pt-BR";rec.continuous=true;rec.interimResults=true;
-    const ta=$("fText");baseText=ta.value.trim()?ta.value.trim()+" ":"";let finalText="";
-    rec.onresult=e=>{let interim="";for(let k=e.resultIndex;k<e.results.length;k++){const r=e.results[k];if(r.isFinal)finalText+=r[0].transcript+" ";else interim+=r[0].transcript;}
-      ta.value=(baseText+finalText+interim).replace(/\s+/g," ").trimStart();};
-    rec.onerror=e=>{const m={"not-allowed":"Permita o microfone nas configurações do navegador","service-not-allowed":"Permita o microfone nas configurações do navegador","no-speech":"Não ouvi nada. Toque e fale de novo","network":"Sem internet para transcrever. Use o microfone do teclado","audio-capture":"Nenhum microfone encontrado"}[e.error];
-      if(m){setTalk(false,m);listening=false;}};
-    rec.onend=()=>{if(listening){try{baseText=$("fText").value.trim()+" ";finalText="";rec.start();}catch(e){setTalk(false);}}};
-    try{rec.start();setTalk(true);}catch(e){setTalk(false,"Não consegui abrir o microfone");}
-  }
-  function stopTalk(){listening=false;if(rec){try{rec.stop();}catch(e){}}setTalk(false);}
+    if(!SR)return;const ta=$("fText");baseText=ta?clean(ta.value):"";sessText="";
+    try{rec=newSession();rec.start();setTalk(true);}catch(e){setTalk(false,"Não consegui abrir o microfone");}}
+  function finishStop(){clearTimeout(stopTimer);setTalk(false);const f=afterStop;afterStop=null;if(f)f();}
+  function stopTalk(then){afterStop=then||null;if(!listening&&!rec){finishStop();return;}listening=false;setTalk(false);
+    if(rec){try{rec.stop();}catch(e){}}clearTimeout(stopTimer);stopTimer=setTimeout(()=>{if(sessText){baseText=joinNoDup(baseText,sessText);sessText="";show();}rec=null;finishStop();},1500);}
   function closeSheet(){stopTalk();sheet=null;$("scrim").classList.remove("on");$("sheet").classList.remove("on");$("fab").hidden=false;
     setTimeout(()=>{if(!sheet){$("scrim").hidden=true;$("sheet").hidden=true;}},280);}
   const pick=(id,keys)=>{const i=ideas.find(x=>x.id===id)||{};const o={};keys.forEach(k=>o[k]=i[k]??"");return o;};
@@ -447,7 +535,11 @@ textarea{min-height:120px;resize:vertical}
     const act=b.dataset.act,id=b.dataset.id;
     if(act==="expand"){expanded.has(id)?expanded.delete(id):expanded.add(id);render();return;}
     if(act==="close")return closeSheet();
-    if(act==="talk"){listening?stopTalk():startTalk();return;}
+    if(act==="talk"){if(listening){stopTalk(()=>{if(aiReady()&&$("fText")&&$("fText").value.trim())organize();});}else startTalk();return;}
+    if(act==="organize"){if(!aiReady()){closeSheet();view="cats";render();setTimeout(()=>{const el=$("aiKey");if(el){el.scrollIntoView({block:"center"});el.focus();}},320);toast("Cole sua chave de IA aqui.");return;}organize();return;}
+    if(act==="aiSave"){const key=$("aiKey").value.trim();if(!key){toast("Cole a chave primeiro.",true);return;}setAI({prov:S.prov||ai().prov,key});render();toast("Chave salva. Testando…");
+      try{await askAI('Responda só este JSON: {"ok":true}');toast("IA funcionando ✨");}catch(e){toast(e.message,true);}return;}
+    if(act==="aiDel"){setAI({prov:ai().prov,key:""});render();toast("Chave removida deste celular.");return;}
     if(act==="backup"){window.__backup();render();return;}
     if(act==="snooze"){setMeta({snoozeUntil:Date.now()+2*DAY});render();return;}
     if(["menu","edit","done","doneEdit","catMenu"].includes(act))return openSheet(act,id);
@@ -463,12 +555,12 @@ textarea{min-height:120px;resize:vertical}
       stopTalk();const t=$("fText").value.trim();if(!t){toast("Fale ou escreva a ideia primeiro.",true);return;}
       if(!col){toast("Entre na sua conta Claude para salvar.",true);return;}
       const title=$("fTitle").value.trim()||firstLine(t),rem=when();
-      try{const r=await col.add({title,text:t,cat:S.cat||"",urgent:urgOn(),remindAt:rem,status:"aberta",note:"",result:"",createdAt:new Date().toISOString(),doneAt:""});
+      try{const r=await col.add({title,text:t,raw:S.raw&&S.raw!==t?S.raw:"",cat:S.cat||"",urgent:urgOn(),remindAt:rem,status:"aberta",note:"",result:"",createdAt:new Date().toISOString(),doneAt:""});
         view="open";render();if(rem){stopTalk();openSheet("remind",r.id);}else{closeSheet();toast("Ideia salva!");}}
       catch(e){toast("Não consegui salvar. Confira a internet.",true);}return;}
     if(act==="saveEdit"){const title=$("fTitle").value.trim();if(!title){toast("Dê um título.",true);return;}
       const old=ideas.find(x=>x.id===id),rem=when();
-      if(await upd(id,{title,text:$("fText").value.trim(),cat:S.cat||"",urgent:urgOn(),remindAt:rem},rem&&rem!==old.remindAt?null:"Alterações salvas.")){if(rem&&rem!==old.remindAt)openSheet("remind",id);else closeSheet();}return;}
+      if(await upd(id,{title,text:$("fText").value.trim(),raw:(S.raw&&S.raw!==$("fText").value.trim())?S.raw:(old.raw||""),cat:S.cat||"",urgent:urgOn(),remindAt:rem},rem&&rem!==old.remindAt?null:"Alterações salvas.")){if(rem&&rem!==old.remindAt)openSheet("remind",id);else closeSheet();}return;}
     if(act==="confirmDone"){const prev=pick(id,["status","note","result","doneAt"]);if(await upd(id,{status:"executada",note:$("fNote").value.trim(),result:S.res||"",doneAt:localISO(new Date())},null)){closeSheet();toast("Boa! Movida para executadas.",false,()=>upd(id,prev));}return;}
     if(act==="saveDone"){if(await upd(id,{note:$("fNote").value.trim(),result:S.res||""},"Salvo."))closeSheet();return;}
     if(act==="reopen"){const prev=pick(id,["status","doneAt"]);if(await upd(id,{status:"aberta",doneAt:""},null)){closeSheet();toast("De volta para a fazer.",false,()=>upd(id,prev));}return;}
