@@ -126,7 +126,7 @@ h1{font-family:var(--f-display);font-weight:800;font-size:2.3rem;line-height:1;m
 .sub{margin:-10px 0 0;color:var(--muted);font-size:.92rem}
 .field{display:flex;flex-direction:column;gap:8px;min-width:0}
 .field>label,.lbl{font-weight:700;font-size:.85rem;color:var(--muted)}
-textarea,input[type=text],input[type=datetime-local]{width:100%;box-sizing:border-box;border:0;border-radius:16px;padding:14px 16px;background:var(--raised)}
+textarea,input[type=text],input[type=password],input[type=time],input[type=datetime-local]{width:100%;box-sizing:border-box;border:0;border-radius:16px;padding:14px 16px;background:var(--raised)}
 textarea{min-height:120px;resize:vertical}
 .mic{display:flex;align-items:center;gap:12px;background:var(--micbg);border-radius:16px;padding:12px 14px;font-size:.9rem}
 .mic .ic{width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
@@ -163,6 +163,7 @@ textarea{min-height:120px;resize:vertical}
 .menu .b{justify-content:flex-start;width:100%}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .seg button{background:var(--raised);border-radius:16px;padding:14px 6px;font-weight:700;font-size:.85rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px;border:2px solid transparent}
+.seg button[aria-pressed="true"]{background:var(--pill);color:var(--ink);border-color:var(--brand)}
 .seg button[aria-pressed="true"][data-v="funcionou"]{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
 .seg button[aria-pressed="true"][data-v="nao"]{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
 .seg button[aria-pressed="true"][data-v="aguardando"]{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
